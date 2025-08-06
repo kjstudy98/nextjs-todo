@@ -1,13 +1,9 @@
 "use client";
 
 import TodoCard from "@/components/TodoCard";
+import { TodoTitleOnlySchema } from "@/validation/schema";
 import { useState } from "react";
-
-interface Todo {
-  id: string;
-  title: string;
-  status: boolean;
-}
+import { Todo } from "@/app/types/types";
 
 const sampleTodos: Todo[] = [
   { id: "001", title: "TODO1", status: false },
@@ -19,13 +15,22 @@ const sampleTodos: Todo[] = [
 export default function TodoManagement() {
   const [todos, setTodos] = useState(sampleTodos);
   const [inputTodo, setInputTodo] = useState("");
+  const [errors, setErrors] = useState<string[]>([]);
 
   const onChangeInputTodo = (value: string) => {
     setInputTodo(value);
   };
 
   const onClickAdd = () => {
-    // TODO: 空白の場合にバリデーションで弾く
+    const result = TodoTitleOnlySchema.safeParse({
+      title: inputTodo.trim(),
+    });
+    if (!result.success) {
+      const errorMessages = result.error.flatten().fieldErrors.title ?? [];
+      setErrors(errorMessages);
+      return;
+    }
+    setErrors([]);
 
     const newTodo: Todo = {
       id: self.crypto.randomUUID(),
@@ -38,10 +43,10 @@ export default function TodoManagement() {
     setInputTodo("");
   };
 
-  const onChangeStatus = (title: string) => {
+  const onChangeStatus = (id: string) => {
     const newTodos = todos.map((todo) => {
-      if (todo.title === title) {
-        return { id: todo.id, title: todo.title, status: !todo.status };
+      if (todo.id === id) {
+        return { ...todo, status: !todo.status };
       } else {
         return todo;
       }
@@ -68,18 +73,26 @@ export default function TodoManagement() {
         >
           追加
         </button>
+        {errors.length ? (
+          <div style={{ color: "red", marginBottom: 8 }}>
+            {errors.map((e, idx) => (
+              <div key={idx}>{e}</div>
+            ))}
+          </div>
+        ) : (
+          ""
+        )}
       </div>
 
       <div className="mb-4">
         <p className="font-bold">TODO</p>
         {todos
           .filter((todo) => !todo.status)
-          .map((todo, idx) => (
+          .map((todo) => (
             <TodoCard
-              title={todo.title}
+              todo={todo}
               onChangeStatus={onChangeStatus}
-              key={idx}
-              status={todo.status}
+              key={todo.id}
             />
           ))}
       </div>
@@ -88,12 +101,11 @@ export default function TodoManagement() {
         <p className="font-bold">DONE</p>
         {todos
           .filter((todo) => todo.status)
-          .map((todo, idx) => (
+          .map((todo) => (
             <TodoCard
-              title={todo.title}
+              todo={todo}
               onChangeStatus={onChangeStatus}
-              key={idx}
-              status={todo.status}
+              key={todo.id}
             />
           ))}
       </div>
