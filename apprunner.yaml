@@ -1,0 +1,11 @@
+version: 1.0
+runtime: nodejs18
+
+build:
+  commands:
+    - npm install
+    - npm run build
+
+start:
+  command: npm run start
+  port: 8080
