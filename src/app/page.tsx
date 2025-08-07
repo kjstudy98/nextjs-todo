@@ -2,28 +2,37 @@
 
 import TodoCard from "@/components/TodoCard";
 import { TodoTitleOnlySchema } from "@/validation/schema";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Todo } from "@/app/types/types";
 
-const sampleTodos: Todo[] = [
-  { id: "001", title: "TODO1", status: false },
-  { id: "002", title: "TODO2", status: false },
-  { id: "003", title: "TODO3", status: true },
-  { id: "004", title: "TODO4", status: true },
-];
-
 export default function TodoManagement() {
-  const [todos, setTodos] = useState(sampleTodos);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [inputTodo, setInputTodo] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+
+  // TODOリスト取得
+  const fetchTodos = useCallback(async () => {
+    try {
+      const res = await fetch("/api/todos");
+      const data = await res.json();
+      setTodos(data);
+    } catch (e) {
+      console.error("Failed to fetch todos:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
 
   const onChangeInputTodo = (value: string) => {
     setInputTodo(value);
   };
 
-  const onClickAdd = () => {
+  const onClickAdd = async (formData: FormData) => {
+    const title = formData.get("title") as string;
     const result = TodoTitleOnlySchema.safeParse({
-      title: inputTodo.trim(),
+      title,
     });
     if (!result.success) {
       const errorMessages = result.error.flatten().fieldErrors.title ?? [];
@@ -31,16 +40,14 @@ export default function TodoManagement() {
       return;
     }
     setErrors([]);
-
-    const newTodo: Todo = {
-      id: self.crypto.randomUUID(),
-      title: inputTodo.trim(),
-      status: false,
-    };
-
-    const newTodos = [...todos, newTodo];
-    setTodos(newTodos);
     setInputTodo("");
+
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    fetchTodos();
   };
 
   const onChangeStatus = (id: string) => {
@@ -61,32 +68,34 @@ export default function TodoManagement() {
           TODOアプリ
         </h1>
 
-        <div className="mb-6">
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              title="todo"
-              name="todo"
-              value={inputTodo}
-              onChange={(e) => onChangeInputTodo(e.target.value)}
-              className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
-              placeholder="新しいTODO"
-            />
-            <button
-              onClick={onClickAdd}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
-            >
-              追加
-            </button>
-          </div>
-          {errors.length > 0 && (
-            <div className="text-red-500 text-sm">
-              {errors.map((e, idx) => (
-                <div key={idx}>{e}</div>
-              ))}
+        <form action={onClickAdd}>
+          <div className="mb-6">
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                title="title"
+                name="title"
+                value={inputTodo}
+                onChange={(e) => onChangeInputTodo(e.target.value)}
+                className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+                placeholder="新しいTODO"
+              />
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
+              >
+                追加
+              </button>
             </div>
-          )}
-        </div>
+            {errors.length > 0 && (
+              <div className="text-red-500 text-sm">
+                {errors.map((e, idx) => (
+                  <div key={idx}>{e}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </form>
 
         <div className="space-y-4">
           <div>
