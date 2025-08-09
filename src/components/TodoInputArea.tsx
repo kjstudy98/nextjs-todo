@@ -24,12 +24,22 @@ const TodoInputArea = ({ onCreate }: TodoInputAreaProps) => {
       setErrors(errorMessages);
       return;
     }
+
+    const res = fetch("/api/todo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title }),
+    }).then(() => {
+      console.log("created date: ", res);
+      onCreate().catch((e) => {
+        console.log("Failed to fetch latest TODOs: ", e);
+      });
+    });
+
     setErrors([]);
     setInputTodo("");
-    // 登録
-
-    //
-    await onCreate();
   };
 
   return (
